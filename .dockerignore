@@ -1,0 +1,13 @@
+.env
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+eval_out
+tests
+examples
+evaluate.py
+*.zip
+README.md

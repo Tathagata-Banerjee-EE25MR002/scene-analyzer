@@ -1,0 +1,17 @@
+{
+  "street1.jpg": {
+    "objects": ["person", "bicycle", "car", "traffic light"],
+    "scene_type": "street",
+    "environment": "outdoor",
+    "activities": ["person riding a bicycle"],
+    "relationships": [["person", "riding", "bicycle"], ["bicycle", "next to", "car"]],
+    "captions": ["A cyclist waits at a traffic light beside a parked car."]
+  },
+  "kitchen1.jpg": {
+    "objects": ["refrigerator", "oven", "sink", "cup"],
+    "scene_type": "kitchen",
+    "environment": "indoor",
+    "activities": [],
+    "captions": ["A tidy kitchen with a fridge, oven and sink."]
+  }
+}

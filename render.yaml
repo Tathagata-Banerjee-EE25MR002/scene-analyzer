@@ -1,0 +1,15 @@
+# Render Blueprint: in the Render dashboard choose New > Blueprint and point it at this repo.
+# Render asks for the two secrets below the first time the Blueprint is created.
+services:
+  - type: web
+    name: scene-analyzer
+    runtime: docker
+    plan: free            # free instances sleep when idle (the first request after a pause is slow); use starter for always-on
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_PASSWORD   # the shared password people type when they open the site
+        sync: false
+      - key: APP_USERNAME
+        value: user
