@@ -11,3 +11,5 @@ examples
 evaluate.py
 *.zip
 README.md
+data
+.DS_Store

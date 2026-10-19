@@ -46,6 +46,31 @@
   .brand b { font: 800 21px/1 var(--display); letter-spacing: -.02em; color: var(--ink); font-variation-settings: "wdth" 85; }
   .chip { margin-left: auto; font: 500 13px/1 var(--display); background: var(--wash); color: var(--mute); padding: 7px 12px; border-radius: 999px; }
   .keywarn { background: var(--hi); color: var(--navy); font: 600 15px/1.4 var(--display); padding: 10px clamp(16px, 3vw, 32px); }
+  .who { display: flex; align-items: center; gap: 4px; }
+  .who .chip { margin: 0 6px 0 0; }
+  .chip.low { background: var(--hi); color: var(--navy); }
+  .hl { background: none; border: 0; cursor: pointer; padding: 8px 10px; border-radius: 8px; font: 600 15px/1 var(--display); color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .hl:hover { background: var(--wash); }
+  .acct-name { display: inline-block; max-width: 14ch; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+  .hl.menu::after { content: ""; display: inline-block; margin-left: 7px; border: 4.5px solid transparent; border-top-color: currentColor; border-bottom: 0; vertical-align: 2px; }
+  dialog.acct { border: 2px solid var(--ink); border-radius: 18px; padding: 26px; width: min(440px, calc(100vw - 32px)); background: var(--paper); color: var(--ink); }
+  dialog.acct::backdrop { background: rgba(16, 20, 58, .6); }
+  dialog.acct h2 { margin: 0 0 4px; font: 800 26px/1.1 var(--display); letter-spacing: -.02em; }
+  dialog.acct .who-line { margin: 0 0 18px; font: 400 18px/1.5 var(--text); color: var(--mute); }
+  dialog.acct form { display: grid; gap: 6px; }
+  dialog.acct label { font: 600 15px/1.2 var(--display); margin-top: 8px; }
+  dialog.acct input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--wash); font: 500 16px/1.3 var(--display); }
+  dialog.acct input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  dialog.acct .hint { margin: 2px 0 0; font: 400 15px/1.4 var(--text); color: var(--mute); }
+  dialog.acct .dmsg { margin: 8px 0 0; font: 600 15px/1.4 var(--display); color: var(--err); }
+  dialog.acct .dmsg.good { color: #17803D; }
+  @media (prefers-color-scheme: dark) { dialog.acct .dmsg.good { color: #5FD68A; } }
+  dialog.acct .drow { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .dbtn { font: 700 15px/1 var(--display); border-radius: 10px; padding: 12px 16px; border: 2px solid var(--line); background: none; cursor: pointer; color: var(--accent); }
+  .dbtn:hover { border-color: var(--accent); }
+  .dbtn.solid { background: var(--ultra); border-color: transparent; color: #fff; }
+  .dbtn:disabled { opacity: .6; cursor: progress; }
+  @media (max-width: 700px) { #model { display: none; } .who { margin-left: auto; } .acct-name { max-width: 9ch; } .who .chip { display: none; } }
 
   /* ---------- landing ---------- */
   .landing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); min-height: calc(100vh - var(--head-h)); }
@@ -226,6 +251,12 @@
     <b>Scene Analyzer</b>
   </div>
   <span class="chip" id="model">Connecting…</span>
+  <div class="who" id="who" hidden>
+    <span class="chip" id="usage" role="status"></span>
+    <a class="hl" id="adminLink" href="/admin" hidden>People</a>
+    <button class="hl menu" id="acctBtn" type="button" aria-haspopup="dialog"><span class="acct-name" id="acctName"></span></button>
+    <button class="hl" id="signOut" type="button">Sign out</button>
+  </div>
 </header>
 <div class="keywarn" id="keyWarn" hidden>ANTHROPIC_API_KEY isn't set. Add it to the .env file next to the app and restart the server.</div>
 
@@ -347,6 +378,20 @@
   </section>
 </main>
 
+<dialog class="acct" id="acctDlg" aria-labelledby="acctTitle">
+  <h2 id="acctTitle">Your account</h2>
+  <p class="who-line" id="acctWho"></p>
+  <form id="pwForm" novalidate>
+    <label for="pw-cur">Current password</label>
+    <input id="pw-cur" type="password" autocomplete="current-password">
+    <label for="pw-new">New password</label>
+    <input id="pw-new" type="password" autocomplete="new-password">
+    <p class="hint">At least 10 characters. Changing it signs you out on your other devices.</p>
+    <p class="dmsg" id="pwMsg" role="status" hidden></p>
+    <div class="drow"><button class="dbtn" type="button" id="acctClose">Close</button><button class="dbtn solid" type="submit" id="pwGo">Change password</button></div>
+  </form>
+</dialog>
+
 <div class="veil" id="veil">Drop the image to start</div>
 <input type="file" id="file" accept="image/*" hidden>
 
@@ -377,6 +422,53 @@ function el(tag, props = {}, ...kids) {
 
 let file = null, objUrl = null, result = null, busy = false, activeTab = "Objects";
 let byId = {}, num = {};
+
+// ---------------------------------------------------------------- account
+let me = null;
+async function loadMe() {
+  try {
+    const r = await fetch("/api/me");
+    if (r.status === 401) { location.href = "/login"; return; }
+    me = await r.json(); renderMe();
+  } catch { /* offline: keep what we have */ }
+}
+function renderMe() {
+  if (!me || me.auth_disabled) return;
+  $("who").hidden = false;
+  $("acctName").textContent = me.username;
+  $("adminLink").hidden = !me.is_admin;
+  const u = $("usage");
+  if (me.daily_limit) {
+    const left = Math.max(0, me.daily_limit - me.used_today);
+    u.hidden = false; u.textContent = `${left} of ${me.daily_limit} left today`; u.classList.toggle("low", left <= 3);
+    u.title = "Resets at " + new Date(me.resets_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } else { u.hidden = true; }
+}
+loadMe();
+
+$("signOut").onclick = async () => {
+  try { await fetch("/api/logout", { method: "POST" }); } finally { location.href = "/login"; }
+};
+const dlg = $("acctDlg");
+$("acctBtn").onclick = () => {
+  $("acctWho").textContent = me ? `Signed in as ${me.username}.` : "";
+  $("pwForm").reset(); $("pwMsg").hidden = true; dlg.showModal(); $("pw-cur").focus();
+};
+$("acctClose").onclick = () => dlg.close();
+$("pwForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const msg = $("pwMsg"), go = $("pwGo"); msg.hidden = true; go.disabled = true;
+  try {
+    const r = await fetch("/api/password", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current: $("pw-cur").value, new: $("pw-new").value }) });
+    const body = await r.json().catch(() => ({}));
+    if (r.status === 401) { location.href = "/login"; return; }
+    msg.className = "dmsg" + (r.ok ? " good" : "");
+    msg.textContent = r.ok ? "Password changed." : (typeof body.detail === "string" ? body.detail : "Check the form and try again.");
+    if (r.ok) $("pwForm").reset();
+  } catch { msg.className = "dmsg"; msg.textContent = "Can't reach the server. Try again."; }
+  msg.hidden = false; go.disabled = false;
+};
 const frame = $("frame");
 
 // ---------------------------------------------------------------- health
@@ -433,13 +525,14 @@ async function analyze() {
   setBusy(true);
   try {
     const r = await fetch("/analyze", { method: "POST", body: fd });
+    if (r.status === 401) { location.href = "/login"; return; }   // the session expired
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : `The server returned an error (${r.status}). Try again.`);
     result = body; render(); say("");
   } catch (e) {
     result = null; $("idle").hidden = false; $("results").hidden = true;
     say(e instanceof TypeError ? "Can't reach the server. Check that it's still running, then try again." : e.message, "err");
-  } finally { setBusy(false); }
+  } finally { setBusy(false); loadMe(); }
 }
 
 function setBusy(b) {

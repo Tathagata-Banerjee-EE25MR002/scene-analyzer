@@ -63,3 +63,64 @@ def png_bytes(size=(64, 48), color=(200, 30, 30), mode="RGB") -> bytes:
     buf = io.BytesIO()
     Image.new(mode, size, color).save(buf, "PNG")
     return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------- app + accounts helpers
+
+PW = "correct horse battery"
+
+
+def db_url(tmp_path) -> str:
+    """SQLite file per test by default. With TEST_DATABASE_URL (a Postgres maintenance database) each tmp_path
+    gets its own Postgres database instead, so the same suite runs against production's database."""
+    import hashlib
+    import os
+
+    pg = os.environ.get("TEST_DATABASE_URL")
+    if not pg:
+        return f"sqlite:///{tmp_path}/t.db"
+    import sqlalchemy as sa
+
+    name = "t_" + hashlib.md5(str(tmp_path).encode()).hexdigest()[:16]
+    admin = sa.create_engine(pg.replace("postgresql://", "postgresql+psycopg://", 1), isolation_level="AUTOCOMMIT")
+    with admin.connect() as c:
+        if not c.execute(sa.text("select 1 from pg_database where datname = :n"), {"n": name}).first():
+            c.execute(sa.text(f'create database "{name}"'))
+    admin.dispose()
+    return pg.rsplit("/", 1)[0] + "/" + name
+
+
+def make_client(tmp_path, backend=None, base_url="http://testserver", **overrides):
+    """A TestClient around a fresh app: its own SQLite file, the mock VLM, and test-friendly limits."""
+    from fastapi.testclient import TestClient
+
+    from app.analyzer import SceneAnalyzer
+    from app.config import Settings
+    from app.main import create_app, get_analyzer
+
+    base = dict(database_url=db_url(tmp_path), secret_key="k" * 40, open_registration=True,
+                user_daily_limit=20, global_daily_limit=0, rate_limit_per_min=0, global_rate_limit_per_min=0)
+    app = create_app(Settings(**{**base, **overrides}))
+    app.dependency_overrides[get_analyzer] = lambda: SceneAnalyzer(backend or MockBackend())
+    c = TestClient(app, base_url=base_url)
+    c.mock = backend
+    return c
+
+
+def another_device(client):
+    """A second browser talking to the same app (its own cookie jar)."""
+    from fastapi.testclient import TestClient
+
+    return TestClient(client.app, base_url=str(client.base_url))
+
+
+def register(client, username="alice", password=PW, **extra):
+    return client.post("/api/register", json={"username": username, "password": password, **extra})
+
+
+def login(client, username="alice", password=PW):
+    return client.post("/api/login", json={"username": username, "password": password})
+
+
+def analyze(client, data=None, **kw):
+    return client.post("/analyze", files={"file": ("x.png", data if data is not None else png_bytes(), "image/png")}, **kw)

@@ -34,10 +34,15 @@ python -m uvicorn app.main:app --port 8000
 Open <http://127.0.0.1:8000> — drop, choose or paste an image. Hover an object or relationship to
 highlight its box. Interactive API docs are at `/docs`.
 
-**API**
+The first time, choose **Create account** and make yourself a username and password; accounts are kept in
+`data/scene_analyzer.db`. Each person signs in with their own account.
+
+**API** — sign in once, keep the cookie, then post images:
 
 ```bash
-curl -F file=@photo.jpg -F focus="read any signs" http://127.0.0.1:8000/analyze
+curl -c jar -H 'Content-Type: application/json' -d '{"username":"me","password":"my long password"}' \
+     http://127.0.0.1:8000/api/login
+curl -b jar -F file=@photo.jpg -F focus="read any signs" http://127.0.0.1:8000/analyze
 ```
 
 **CLI**
@@ -47,8 +52,8 @@ python -m app.cli photo.jpg --out photo.scene.json
 ```
 
 The key is read from the environment or `.env` and is never sent to the browser. Run like this, the
-server listens on localhost with no login. Before putting it on the internet, read **Deploying** below,
-because every analysis spends your API credits.
+server listens on localhost and anyone who can reach it may create an account. Before putting it on the
+internet, read **Deploying** below, because every analysis spends your API credits.
 
 ## Output
 
@@ -101,26 +106,47 @@ family as the analyzer, so pass `--judge-model` with a different model to reduce
 There are no public ground-truth labels for relationships/attributes at this granularity, so for those
 use your own annotations or the judge.
 
-## Deploying
+## Accounts and deploying
 
-The app is stateless (nothing is written to disk), so it runs anywhere a container or a Python process
-can. Two things matter on the public internet:
+Everyone signs in with **their own username and password**; nobody uses yours. People create their own
+account on the sign-in page. Because every analysis spends your Claude API credits, a public deployment
+is locked down by default:
 
-- **Every analysis spends your Claude API credits**, so the Docker image refuses to start unless
-  `APP_PASSWORD` is set. Visitors get the browser's sign-in prompt (user name `APP_USERNAME`, default
-  `user`); `/health` stays open for platform health checks. There is also a per-IP limit (10 analyses a
-  minute), a global limit (60 a minute) and a cap of 4 simultaneous analyses. The password is the real
-  protection; the rate limits are best-effort (in memory, per instance). Share the password only with
-  people you'd let spend your credits, and set a spending limit on your Anthropic account as a backstop.
-- **Use HTTPS.** Basic auth sends the password with every request. All the hosts below provide HTTPS.
+- **Invite code.** Creating an account needs `REGISTRATION_CODE`, which you give to the people you want
+  to allow. (`OPEN_REGISTRATION=1` lets anyone sign up; only use it with low limits.)
+- **Your admin account.** `ADMIN_USERNAME` / `ADMIN_PASSWORD` create your account on first start. At
+  `/admin` you can see who has signed up and how much each person has used, disable or delete accounts,
+  and reset a forgotten password (it shows a temporary one, once).
+- **Limits.** 20 analyses per person per day (`USER_DAILY_LIMIT`), 300 per day across everyone
+  (`GLOBAL_DAILY_LIMIT`), 10 a minute per person, 4 at once. Photos that fail to analyze don't count.
+  Also set a spending limit in your Anthropic console as a backstop.
+- **Passwords** are stored as salted scrypt hashes, never in plain text. Login cookies are signed,
+  HttpOnly and Secure (on https). Repeated wrong passwords lock the account and the address out for a while.
+  Changing or resetting a password signs that person out of every device.
+- **The Docker image refuses to start** (and tells you why) if `SECRET_KEY`, `DATABASE_URL`, an invite
+  code, or a proper admin password is missing.
+
+### Where accounts live: `DATABASE_URL`
+
+Accounts and usage counts need a database that survives restarts. A free web service's disk is wiped on
+every deploy and restart, so a SQLite file there would lose every account. Use a hosted Postgres and put
+its connection string in `DATABASE_URL` (`postgres://` and `postgresql://` both work).
+
+- **Neon or Supabase** (both have free tiers; check their current limits) keep the data as long as your
+  account lasts. Create a project, copy the connection string, and paste it in.
+- **Render's own free Postgres** expires after 30 days, so it is only good for a quick trial.
+
+The tables are created automatically.
 
 ### Render
 
 1. Push this folder to a GitHub repository.
 2. In the Render dashboard choose **New > Blueprint** and pick the repository. `render.yaml` defines the
-   service; Render asks for `ANTHROPIC_API_KEY` and `APP_PASSWORD` when the Blueprint is first created.
-   (Secrets for an existing service are added later under its **Environment** tab.)
-3. When the deploy finishes, open the `onrender.com` address and sign in with user name `user` and your password.
+   service. Render asks for `ANTHROPIC_API_KEY`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` and
+   `REGISTRATION_CODE`; `SECRET_KEY` is generated for you.
+   (If the service already exists, add the same variables under its **Environment** tab and save.)
+3. When the deploy finishes, open the `onrender.com` address, sign in as your admin user, and give your
+   friends the address and the invite code. They choose **Create account** and pick their own login.
 
 Free instances sleep when idle, so the first request after a pause is slow. Use a paid instance for a
 demo you need ready at any moment.
@@ -129,7 +155,11 @@ demo you need ready at any moment.
 
 ```bash
 docker build -t scene-analyzer .
-docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... -e APP_PASSWORD='choose-a-passphrase' scene-analyzer
+docker run -p 8000:8000 \
+  -e ANTHROPIC_API_KEY=sk-ant-... -e DATABASE_URL='postgresql://...' \
+  -e SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" \
+  -e REGISTRATION_CODE='an invite code' -e ADMIN_USERNAME=owner -e ADMIN_PASSWORD='a long passphrase' \
+  scene-analyzer
 ```
 
 The image listens on `$PORT` when the host sets it (Render, Railway, Cloud Run) and on 8000 otherwise.
@@ -139,11 +169,11 @@ Keep the key in the host's secret store rather than a plain environment variable
 
 ```bash
 pip install -r requirements.txt
-APP_PASSWORD='choose-a-passphrase' REQUIRE_PASSWORD=1 \
+REQUIRE_AUTH=1 DATABASE_URL=... SECRET_KEY=... REGISTRATION_CODE=... ADMIN_USERNAME=owner ADMIN_PASSWORD=... \
   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'
 ```
 
-Put a TLS-terminating proxy (Caddy, nginx) in front of it.
+Put a TLS-terminating proxy (Caddy, nginx) in front of it. Without TLS, passwords cross the network in the clear.
 
 ### Things to know
 
@@ -151,9 +181,11 @@ Put a TLS-terminating proxy (Caddy, nginx) in front of it.
   lower `ANTHROPIC_TIMEOUT_S` and `ANTHROPIC_MAX_RETRIES` or pick a host with longer timeouts.
 - **Memory.** Uploads are downscaled before use and JPEGs are decoded at reduced size. Images over
   `MAX_IMAGE_MEGAPIXELS` (50) are rejected; lower that on very small instances.
-- **One instance.** The rate limits live in memory, so with several instances each enforces its own.
+- **Photos are not stored.** Only usernames, password hashes and per-day usage counts are kept.
+- **One instance.** The per-minute limits live in memory, so with several instances each enforces its own;
+  the daily limits are in the database and are shared.
 - **Fonts.** The page loads two fonts from Google Fonts, so visitors' browsers contact Google. Delete the
-  four Google Fonts `<link>` tags in `app/static/index.html` to avoid that; system fonts are used instead.
+  Google Fonts `<link>` tags in the pages under `app/static/` to avoid that; system fonts are used instead.
 
 ## Tests
 
@@ -175,11 +207,19 @@ errors map to HTTP statuses.
 | `MAX_IMAGE_EDGE` | `1568` | px, longest side sent to the model |
 | `MAX_UPLOAD_MB` | `20` | |
 | `MAX_OUTPUT_TOKENS` | `8192` | raise if you see "output was truncated" on very busy scenes |
-| `APP_PASSWORD` | none | shared login password; required when `REQUIRE_PASSWORD=1` (the Docker image sets it) |
-| `APP_USERNAME` | `user` | |
-| `RATE_LIMIT_PER_MIN` | `10` | analyses per client IP per minute, `0` = off |
+| `REQUIRE_AUTH` | off (Docker image: on) | checks that the settings below are safe and refuses to start otherwise |
+| `DATABASE_URL` | `sqlite:///./data/scene_analyzer.db` | required when `REQUIRE_AUTH=1`; use a persistent Postgres |
+| `SECRET_KEY` | random per start locally | 32+ characters; signs login cookies |
+| `REGISTRATION_CODE` | none | invite code needed to create an account |
+| `OPEN_REGISTRATION` | off | let anyone create an account |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | none | create your admin account on first start (password 10+ characters) |
+| `USER_DAILY_LIMIT` | `20` | analyses per person per UTC day, `0` = unlimited |
+| `GLOBAL_DAILY_LIMIT` | `300` | analyses per day across everyone, `0` = unlimited |
+| `RATE_LIMIT_PER_MIN` | `10` | analyses per person per minute, `0` = off |
 | `GLOBAL_RATE_LIMIT_PER_MIN` | `60` | analyses per minute across everyone, `0` = off |
 | `MAX_CONCURRENT` | `4` | analyses running at once on one instance |
+| `SESSION_DAYS` | `7` | how long a sign-in lasts |
+| `COOKIE_SECURE` | auto | force the Secure flag on the login cookie |
 | `MAX_IMAGE_MEGAPIXELS` | `50` | larger images are rejected |
 | `ANTHROPIC_TIMEOUT_S` / `ANTHROPIC_MAX_RETRIES` | `90` / `2` | worst-case request time is about timeout x (retries + 1) |
 | `PORT` | `8000` | set by most hosts; used by the Docker image |

@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 eval_out/
 .venv/
+.DS_Store
+data/

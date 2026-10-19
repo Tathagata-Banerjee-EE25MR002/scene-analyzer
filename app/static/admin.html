@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People - Scene Analyzer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233A37F0'/%3E%3Cpath d='M8 13V9.5A1.5 1.5 0 0 1 9.5 8H13M19 8h3.5A1.5 1.5 0 0 1 24 9.5V13M24 19v3.5a1.5 1.5 0 0 1-1.5 1.5H19M13 24H9.5A1.5 1.5 0 0 1 8 22.5V19' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%23FFD21F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+<style>
+  :root {
+    --ultra: #3A37F0; --accent: #3A37F0; --hi: #FFD21F; --navy: #10143A; --ink: #10143A; --paper: #F3F4FF;
+    --wash: #E7E8FF; --line: #D3D6F3; --mute: #565B8A; --err: #B4123F; --ok: #17803D; --focus: #3A37F0;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --text: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --head-h: 64px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ultra: #2D2AD8; --accent: #A5A8FF; --ink: #EDEEFF; --paper: #0E1033; --wash: #181B4A;
+            --line: #2B2F6B; --mute: #A3A8DB; --err: #FF86A6; --ok: #5FD68A; --focus: #FFD21F; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--display); -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+
+  .head { min-height: var(--head-h); display: flex; align-items: center; gap: 12px; padding: 8px clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--accent); text-decoration: none; }
+  .brand b { font: 800 21px/1 var(--display); letter-spacing: -.02em; color: var(--ink); font-variation-settings: "wdth" 85; }
+  .head .sp { margin-left: auto; }
+  .hl { background: none; border: 0; cursor: pointer; padding: 8px 10px; border-radius: 8px; font: 600 15px/1 var(--display); color: var(--accent); text-decoration: none; }
+  .hl:hover { background: var(--wash); }
+
+  main { padding: clamp(24px, 4vw, 56px); max-width: 1100px; }
+  h1 { margin: 0 0 8px; font: 800 clamp(34px, 4vw, 52px)/1 var(--display); letter-spacing: -.03em; font-variation-settings: "wdth" 80, "opsz" 96; }
+  .sub { margin: 0 0 28px; font: 400 19px/1.55 var(--text); color: var(--mute); max-width: 60ch; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+  .stat { background: var(--wash); border-radius: 10px; padding: 8px 13px; font: 600 15px/1.2 var(--display); }
+  .stat i { font-style: normal; font-weight: 500; color: var(--mute); margin-right: 7px; }
+
+  .wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; min-width: 780px; }
+  th { text-align: left; font: 600 14px/1.2 var(--display); color: var(--mute); padding: 12px 14px; background: var(--wash); white-space: nowrap; }
+  td { padding: 13px 14px; border-top: 1px solid var(--line); vertical-align: middle; font: 500 15px/1.35 var(--display); }
+  td.name { font: 700 17px/1.2 var(--display); }
+  td .when { color: var(--mute); font-weight: 500; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; font: 600 13px/1.4 var(--display); border-radius: 999px; padding: 1px 10px; border: 1px solid var(--line); color: var(--mute); }
+  .tag.ok { color: var(--ok); border-color: currentColor; }
+  .tag.off { color: var(--err); border-color: currentColor; }
+  .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+  .btn { font: 600 14px/1 var(--display); background: transparent; color: var(--accent); border: 2px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.danger { color: var(--err); }
+  .btn.danger:hover { border-color: var(--err); }
+  .btn:disabled { opacity: .5; cursor: progress; }
+  .empty { padding: 28px 14px; font: italic 400 18px/1.5 var(--text); color: var(--mute); }
+  .msg { margin: 0 0 16px; padding: 11px 14px; border-radius: 10px; background: var(--wash); border-left: 5px solid var(--err); color: var(--err); font: 600 15px/1.4 var(--display); }
+
+  dialog { border: 2px solid var(--ink); border-radius: 18px; padding: 26px; max-width: min(460px, calc(100vw - 32px)); background: var(--paper); color: var(--ink); }
+  dialog::backdrop { background: rgba(16, 20, 58, .6); }
+  dialog h2 { margin: 0 0 8px; font: 800 24px/1.1 var(--display); letter-spacing: -.02em; }
+  dialog p { margin: 0 0 14px; font: 400 17px/1.5 var(--text); color: var(--mute); }
+  .pw { display: block; font: 600 20px/1.2 ui-monospace, Menlo, Consolas, monospace; background: var(--wash); border: 2px dashed var(--accent); border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; user-select: all; word-break: break-all; }
+  .row { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn.solid { background: var(--ultra); color: #fff; border-color: transparent; }
+</style>
+</head>
+<body>
+<header class="head">
+  <a class="brand" href="/">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M4 11V6a2 2 0 0 1 2-2h5M21 4h5a2 2 0 0 1 2 2v5M28 21v5a2 2 0 0 1-2 2h-5M11 28H6a2 2 0 0 1-2-2v-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="16" r="4.5" fill="#FFD21F"/></svg>
+    <b>Scene Analyzer</b>
+  </a>
+  <a class="hl sp" href="/">Back to the analyzer</a>
+  <button class="hl" id="signOut" type="button">Sign out</button>
+</header>
+
+<main>
+  <h1>People</h1>
+  <p class="sub">Everyone with an account. Disable someone to stop them from signing in and analyzing, or reset a password if they're locked out.</p>
+  <div class="stats" id="stats"></div>
+  <p class="msg" id="msg" role="alert" hidden></p>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Joined</th><th>Last sign-in</th><th>Today</th><th>All time</th><th>Status</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>No one has signed up yet. Share the address and the invite code.</div>
+  </div>
+</main>
+
+<dialog id="pwDlg" aria-labelledby="pwTitle">
+  <h2 id="pwTitle">Temporary password</h2>
+  <p id="pwFor"></p>
+  <code class="pw" id="pwVal"></code>
+  <p>Send this to them privately. It's shown once, and they should change it after signing in. They have been signed out on every device.</p>
+  <div class="row"><button class="btn" id="pwCopy" type="button">Copy</button><button class="btn solid" id="pwDone" type="button">Done</button></div>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) { if (k in n) n[k] = v; else n.setAttribute(k, v); }
+  kids.flat().forEach((k) => { if (k != null && k !== false) n.append(k instanceof Node ? k : document.createTextNode(String(k))); });
+  return n;
+};
+const fmt = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Never";
+let limit = null;
+
+function say(text) { $("msg").textContent = text || ""; $("msg").hidden = !text; }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { method: "GET", ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
+  if (r.status === 401) { location.href = "/login"; throw new Error("signed out"); }
+  if (r.status === 403 && path === "/api/admin/users") { location.href = "/"; throw new Error("not an admin"); }
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : `Something went wrong (${r.status}).`);
+  return body;
+}
+
+async function load() {
+  try {
+    const d = await api("/api/admin/users");
+    limit = d.daily_limit; render(d);
+  } catch (e) { if (e.message !== "signed out" && e.message !== "not an admin") say(e.message); }
+}
+
+function render(d) {
+  const us = d.users, today = us.reduce((n, u) => n + u.used_today, 0);
+  $("stats").replaceChildren(
+    el("span", { className: "stat" }, el("i", {}, "Accounts"), us.length),
+    el("span", { className: "stat" }, el("i", {}, "Analyses today"), d.global_daily_limit ? `${today} of ${d.global_daily_limit} site-wide` : today),
+    el("span", { className: "stat" }, el("i", {}, "Per person"), d.daily_limit ? `${d.daily_limit} a day` : "No limit"));
+  $("empty").hidden = us.length > 0;
+  $("rows").replaceChildren(...us.map((u) => {
+    const acts = u.is_admin ? el("span", { className: "when" }, "Administrator") : el("div", { className: "acts" },
+      el("button", { className: "btn", type: "button", textContent: u.is_active ? "Disable" : "Enable", onclick: (e) => act(e, () => api(`/api/admin/users/${u.id}/active`, { method: "POST", body: JSON.stringify({ active: !u.is_active }) })) }),
+      el("button", { className: "btn", type: "button", textContent: "Reset password", onclick: (e) => reset(e, u) }),
+      el("button", { className: "btn danger", type: "button", textContent: "Delete", onclick: (e) => { if (confirm(`Delete ${u.username} and their usage history? This can't be undone.`)) act(e, () => api(`/api/admin/users/${u.id}`, { method: "DELETE" })); } }));
+    return el("tr", {},
+      el("td", { className: "name" }, u.username),
+      el("td", { className: "when" }, fmt(u.created_at)),
+      el("td", { className: "when" }, fmt(u.last_login_at)),
+      el("td", { className: "num" }, limit ? `${u.used_today} of ${limit}` : u.used_today),
+      el("td", { className: "num" }, u.total_used),
+      el("td", {}, el("span", { className: "tag " + (u.is_active ? "ok" : "off") }, u.is_active ? "Active" : "Disabled")),
+      el("td", {}, acts));
+  }));
+}
+
+async function act(e, fn) {
+  const b = e.currentTarget; b.disabled = true; say("");
+  try { await fn(); await load(); } catch (err) { say(err.message); b.disabled = false; }
+}
+
+async function reset(e, u) {
+  const b = e.currentTarget; b.disabled = true; say("");
+  try {
+    const d = await api(`/api/admin/users/${u.id}/reset-password`, { method: "POST", body: "{}" });
+    $("pwFor").textContent = `New password for ${u.username}:`; $("pwVal").textContent = d.temporary_password;
+    $("pwCopy").textContent = "Copy"; $("pwDlg").showModal();
+  } catch (err) { say(err.message); }
+  b.disabled = false;
+}
+$("pwCopy").onclick = async () => { try { await navigator.clipboard.writeText($("pwVal").textContent); $("pwCopy").textContent = "Copied"; } catch { $("pwCopy").textContent = "Select it and copy"; } };
+$("pwDone").onclick = () => { $("pwDlg").close(); $("pwVal").textContent = ""; };
+$("pwDlg").addEventListener("close", () => { $("pwVal").textContent = ""; });
+$("signOut").onclick = async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/login"; };
+load();
+</script>
+</body>
+</html>

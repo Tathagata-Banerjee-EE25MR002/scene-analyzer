@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - Scene Analyzer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233A37F0'/%3E%3Cpath d='M8 13V9.5A1.5 1.5 0 0 1 9.5 8H13M19 8h3.5A1.5 1.5 0 0 1 24 9.5V13M24 19v3.5a1.5 1.5 0 0 1-1.5 1.5H19M13 24H9.5A1.5 1.5 0 0 1 8 22.5V19' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%23FFD21F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+<style>
+  :root {
+    --ultra: #3A37F0; --accent: #3A37F0; --hi: #FFD21F; --navy: #10143A; --ink: #10143A; --paper: #F3F4FF;
+    --wash: #E7E8FF; --line: #D3D6F3; --mute: #565B8A; --err: #B4123F; --focus: #3A37F0;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --text: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --head-h: 64px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ultra: #2D2AD8; --accent: #A5A8FF; --ink: #EDEEFF; --paper: #0E1033; --wash: #181B4A;
+            --line: #2B2F6B; --mute: #A3A8DB; --err: #FF86A6; --focus: #FFD21F; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--display); -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+
+  .head { height: var(--head-h); display: flex; align-items: center; padding: 0 clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+  .brand b { font: 800 21px/1 var(--display); letter-spacing: -.02em; color: var(--ink); font-variation-settings: "wdth" 85; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); min-height: calc(100vh - var(--head-h)); }
+  .l-copy { padding: clamp(28px, 5vw, 76px); display: flex; flex-direction: column; justify-content: center; gap: 22px; max-width: 640px; }
+  h1 { margin: 0; font: 800 clamp(40px, 5vw, 66px)/.97 var(--display); letter-spacing: -.035em; font-variation-settings: "wdth" 80, "opsz" 96; max-width: 12ch; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); }
+  .tab { position: relative; background: none; border: 0; padding: 10px 12px 13px; font: 600 17px/1 var(--display); color: var(--mute); cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected=true] { color: var(--ink); }
+  .tab[aria-selected=true]::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: -2px; height: 7px; border-radius: 4px; background: var(--hi); }
+
+  form { display: grid; gap: 16px; max-width: 420px; }
+  .field label { display: block; font: 600 15px/1.2 var(--display); margin-bottom: 7px; }
+  .field .hint { margin: 6px 0 0; font: 400 15px/1.4 var(--text); color: var(--mute); }
+  .input { position: relative; }
+  input[type=text], input[type=password] { width: 100%; padding: 13px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--wash);
+    font: 500 17px/1.3 var(--display); color: var(--ink); }
+  input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .input input[type=password], .input input.shown { padding-right: 70px; }
+  .peek { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; padding: 6px 8px;
+          font: 600 14px/1 var(--display); color: var(--accent); border-radius: 8px; }
+  .peek:hover { background: var(--paper); }
+  .btn { font: 700 17px/1 var(--display); border-radius: 12px; padding: 15px 22px; border: 2px solid transparent; cursor: pointer; background: var(--ultra); color: #fff;
+         justify-self: start; transition: background .12s, transform .12s; }
+  .btn:hover:not(:disabled) { background: var(--navy); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  @media (prefers-color-scheme: dark) { .btn:hover:not(:disabled) { background: #4A47FF; } }
+  .err { margin: 0; padding: 11px 14px; border-radius: 10px; background: var(--wash); border-left: 5px solid var(--err); color: var(--err); font: 600 15px/1.4 var(--display); }
+  .note { margin: 0; max-width: 42ch; font: 400 17px/1.55 var(--text); color: var(--mute); }
+
+  .l-stage { background: var(--ultra); display: flex; align-items: center; justify-content: center; padding: clamp(24px, 4vw, 56px); overflow: hidden; }
+  .sample { background: #fff; padding: 14px; border-radius: 6px; transform: rotate(-1.6deg); width: min(100%, 640px);
+            box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 40px 70px -22px rgba(6, 8, 70, .65); }
+  .sample svg { display: block; width: 100%; height: auto; border-radius: 2px; }
+  .sb { animation: sbLoop 10s ease-in-out infinite; animation-delay: var(--d); transform-box: fill-box; transform-origin: center; }
+  .sb text { font-family: var(--display); font-weight: 700; font-size: 13px; }
+  .sb .num { font-weight: 800; font-size: 13px; text-anchor: middle; }
+  @keyframes sbLoop { 0% { opacity: 0; transform: scale(.93); } 5% { opacity: 1; transform: scale(1); } 84% { opacity: 1; transform: scale(1); } 92%, 100% { opacity: 0; } }
+
+  @media (max-width: 920px) {
+    .split { grid-template-columns: 1fr; min-height: 0; }
+    .l-copy { padding: 32px 20px 40px; max-width: none; }
+    .l-stage { padding: 32px 20px 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="head">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M4 11V6a2 2 0 0 1 2-2h5M21 4h5a2 2 0 0 1 2 2v5M28 21v5a2 2 0 0 1-2 2h-5M11 28H6a2 2 0 0 1-2-2v-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="16" r="4.5" fill="#FFD21F"/></svg>
+    <b>Scene Analyzer</b>
+  </div>
+</header>
+
+<main class="split">
+  <section class="l-copy">
+    <h1 id="title">Sign in to analyze a photo.</h1>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-in" aria-selected="true" aria-controls="form-in" type="button">Sign in</button>
+      <button class="tab" role="tab" id="tab-up" aria-selected="false" aria-controls="form-up" type="button" tabindex="-1">Create account</button>
+    </div>
+
+    <form id="form-in" role="tabpanel" aria-labelledby="tab-in" novalidate>
+      <div class="field"><label for="in-user">Username</label>
+        <input id="in-user" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+      <div class="field"><label for="in-pass">Password</label>
+        <div class="input"><input id="in-pass" name="password" type="password" autocomplete="current-password" required><button class="peek" type="button" data-for="in-pass">Show</button></div></div>
+      <p class="err" id="err-in" role="alert" hidden></p>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+
+    <form id="form-up" role="tabpanel" aria-labelledby="tab-up" novalidate hidden>
+      <div class="field"><label for="up-user">Username</label>
+        <input id="up-user" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        <p class="hint">3 to 32 letters, numbers, dots, dashes or underscores.</p></div>
+      <div class="field"><label for="up-pass">Password</label>
+        <div class="input"><input id="up-pass" name="password" type="password" autocomplete="new-password" required><button class="peek" type="button" data-for="up-pass">Show</button></div>
+        <p class="hint">At least 10 characters. A few random words work well.</p></div>
+      <div class="field" id="code-field" hidden><label for="up-code">Invite code</label>
+        <input id="up-code" name="code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <p class="hint">Ask the person who runs this site for it.</p></div>
+      <p class="err" id="err-up" role="alert" hidden></p>
+      <button class="btn" type="submit">Create account</button>
+    </form>
+
+    <p class="note" id="note"></p>
+  </section>
+
+  <section class="l-stage" aria-hidden="true">
+    <div class="sample"><svg viewBox="0 0 640 440" role="img" aria-label="Illustration of a desk with a laptop, a lamp, a plant and a mug, each outlined by a numbered box">
+        <rect width="640" height="440" fill="#CFE4FF"/>
+        <rect x="372" y="36" width="212" height="178" rx="6" fill="#FFF7D6"/>
+        <circle cx="544" cy="88" r="26" fill="#FFC93C"/>
+        <path d="M372 160 Q424 120 470 156 T584 150 V214 H372Z" fill="#B9E6CF"/>
+        <path d="M478 36V214M372 124H584" stroke="#fff" stroke-width="8"/>
+        <rect x="0" y="322" width="640" height="118" fill="#E8A04D"/>
+        <rect x="0" y="322" width="640" height="12" fill="#D68A33"/>
+        <!-- lamp -->
+        <ellipse cx="92" cy="324" rx="34" ry="8" fill="#2A2F6B"/>
+        <path d="M92 322 L122 222 L170 174" stroke="#2A2F6B" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M146 170 L196 130 L218 172 Z" fill="#FFC93C" stroke="#2A2F6B" stroke-width="6" stroke-linejoin="round"/>
+        <!-- laptop -->
+        <rect x="250" y="210" width="170" height="108" rx="8" fill="#1C2260"/>
+        <rect x="260" y="220" width="150" height="88" rx="3" fill="#3A37F0"/>
+        <rect x="274" y="236" width="70" height="9" rx="4.5" fill="#FFD21F"/>
+        <rect x="274" y="256" width="112" height="6" rx="3" fill="#A5A8FF"/>
+        <rect x="274" y="270" width="92" height="6" rx="3" fill="#A5A8FF"/>
+        <path d="M232 318 H438 L428 332 H242 Z" fill="#DDE1F5"/>
+        <!-- mug -->
+        <path d="M522 282 h12 a14 14 0 0 1 0 28 h-12" stroke="#fff" stroke-width="8" fill="none"/>
+        <rect x="470" y="268" width="52" height="56" rx="8" fill="#fff"/>
+        <rect x="470" y="268" width="52" height="11" rx="5.5" fill="#FF5C8A"/>
+        <path d="M486 256 q-6 -8 0 -14 M500 256 q-6 -8 0 -14" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <!-- plant -->
+        <ellipse cx="590" cy="266" rx="14" ry="36" fill="#16A34A"/>
+        <ellipse cx="568" cy="278" rx="12" ry="28" fill="#0E8A3E" transform="rotate(-35 568 278)"/>
+        <ellipse cx="612" cy="278" rx="12" ry="28" fill="#0E8A3E" transform="rotate(35 612 278)"/>
+        <path d="M562 296 h56 l-8 36 h-40z" fill="#FF6B5B"/>
+
+        <!-- annotations -->
+        <g class="sb" style="--d:1.3s">
+          <rect x="56" y="112" width="166" height="220" rx="4" fill="none" stroke="#fff" stroke-width="6.5"/>
+          <rect x="56" y="112" width="166" height="220" rx="4" fill="none" stroke="#7C3AED" stroke-width="3"/>
+          <rect x="74" y="99" width="56" height="23" rx="6" fill="#7C3AED" stroke="#fff" stroke-width="2"/><text x="84" y="115" fill="#fff">lamp</text>
+          <circle cx="56" cy="112" r="12" fill="#7C3AED" stroke="#fff" stroke-width="2.5"/><text class="num" x="56" y="116.5" fill="#fff">2</text>
+        </g>
+        <g class="sb" style="--d:.5s">
+          <rect x="228" y="206" width="214" height="128" rx="4" fill="none" stroke="#fff" stroke-width="6.5"/>
+          <rect x="228" y="206" width="214" height="128" rx="4" fill="none" stroke="#0891B2" stroke-width="3"/>
+          <rect x="246" y="193" width="66" height="23" rx="6" fill="#0891B2" stroke="#fff" stroke-width="2"/><text x="256" y="209" fill="#10143A">laptop</text>
+          <circle cx="228" cy="206" r="12" fill="#0891B2" stroke="#fff" stroke-width="2.5"/><text class="num" x="228" y="210.5" fill="#10143A">1</text>
+        </g>
+        <g class="sb" style="--d:2.1s">
+          <rect x="548" y="224" width="86" height="108" rx="4" fill="none" stroke="#fff" stroke-width="6.5"/>
+          <rect x="548" y="224" width="86" height="108" rx="4" fill="none" stroke="#16A34A" stroke-width="3"/>
+          <rect x="566" y="211" width="58" height="23" rx="6" fill="#16A34A" stroke="#fff" stroke-width="2"/><text x="576" y="227" fill="#10143A">plant</text>
+          <circle cx="548" cy="224" r="12" fill="#16A34A" stroke="#fff" stroke-width="2.5"/><text class="num" x="548" y="228.5" fill="#10143A">3</text>
+        </g>
+        <g class="sb" style="--d:2.9s">
+          <rect x="464" y="262" width="88" height="66" rx="4" fill="none" stroke="#fff" stroke-width="6.5"/>
+          <rect x="464" y="262" width="88" height="66" rx="4" fill="none" stroke="#F5A500" stroke-width="3"/>
+          <rect x="482" y="249" width="48" height="23" rx="6" fill="#F5A500" stroke="#fff" stroke-width="2"/><text x="492" y="265" fill="#10143A">mug</text>
+          <circle cx="464" cy="262" r="12" fill="#F5A500" stroke="#fff" stroke-width="2.5"/><text class="num" x="464" y="266.5" fill="#10143A">4</text>
+        </g>
+      </svg></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const modes = { in: { tab: $("tab-in"), form: $("form-in"), title: "Sign in to analyze a photo." },
+                up: { tab: $("tab-up"), form: $("form-up"), title: "Create your account." } };
+
+function show(mode, focus = true) {
+  for (const [k, m] of Object.entries(modes)) {
+    const on = k === mode;
+    m.tab.setAttribute("aria-selected", String(on)); m.tab.tabIndex = on ? 0 : -1; m.form.hidden = !on;
+  }
+  $("title").textContent = modes[mode].title;
+  document.title = (mode === "in" ? "Sign in" : "Create account") + " - Scene Analyzer";
+  history.replaceState(null, "", mode === "up" ? "#create" : location.pathname);
+  if (focus) modes[mode].form.querySelector("input").focus();
+}
+$("tab-in").onclick = () => show("in");
+$("tab-up").onclick = () => show("up");
+for (const t of [$("tab-in"), $("tab-up")]) t.onkeydown = (e) => {
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const to = t === $("tab-in") ? "up" : "in"; show(to, false); modes[to].tab.focus(); }
+};
+show(location.hash === "#create" ? "up" : "in", false);
+
+document.querySelectorAll(".peek").forEach((b) => b.onclick = () => {
+  const i = $(b.dataset.for), reveal = i.type === "password";
+  i.type = reveal ? "text" : "password"; i.classList.toggle("shown", reveal); b.textContent = reveal ? "Hide" : "Show";
+});
+
+fetch("/api/config").then((r) => r.json()).then((c) => {
+  $("code-field").hidden = !c.code_required;
+  $("note").textContent = c.daily_limit
+    ? `Each account can analyze up to ${c.daily_limit} photos a day. Photos are sent to Claude for analysis and are not stored here.`
+    : "Photos are sent to Claude for analysis and are not stored here.";
+}).catch(() => {});
+
+async function submit(form, url, fields, errBox, button) {
+  errBox.hidden = true; button.disabled = true;
+  const label = button.textContent; button.textContent = "One moment...";
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(fields.map((f) => [f, form.elements[f] ? form.elements[f].value : ""]))) });
+    const body = await r.json().catch(() => ({}));
+    if (r.ok) { location.href = "/"; return; }
+    errBox.textContent = typeof body.detail === "string" ? body.detail : "Check the form and try again.";
+  } catch { errBox.textContent = "Can't reach the server. Check your connection and try again."; }
+  errBox.hidden = false; button.disabled = false; button.textContent = label;
+}
+$("form-in").onsubmit = (e) => { e.preventDefault(); const f = e.target;
+  if (!f.elements.username.value.trim() || !f.elements.password.value) { $("err-in").textContent = "Enter your username and password."; $("err-in").hidden = false; return; }
+  submit(f, "/api/login", ["username", "password"], $("err-in"), f.querySelector(".btn")); };
+$("form-up").onsubmit = (e) => { e.preventDefault(); const f = e.target;
+  submit(f, "/api/register", ["username", "password", "code"], $("err-up"), f.querySelector(".btn")); };
+</script>
+</body>
+</html>

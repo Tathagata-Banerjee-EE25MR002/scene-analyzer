@@ -1,5 +1,6 @@
 # Render Blueprint: in the Render dashboard choose New > Blueprint and point it at this repo.
-# Render asks for the two secrets below the first time the Blueprint is created.
+# Render asks for the values marked sync: false the first time the Blueprint is created.
+# (For a service that already exists, add them under its Environment tab instead.)
 services:
   - type: web
     name: scene-analyzer
@@ -9,7 +10,13 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: APP_PASSWORD   # the shared password people type when they open the site
+      - key: DATABASE_URL       # a persistent Postgres, e.g. a Neon connection string (see README)
         sync: false
-      - key: APP_USERNAME
-        value: user
+      - key: ADMIN_USERNAME     # your own account; created on first start
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: REGISTRATION_CODE  # the invite code you give people so they can create an account
+        sync: false
+      - key: SECRET_KEY         # signs the login cookies
+        generateValue: true
